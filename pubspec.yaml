@@ -35,6 +35,30 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.7
+
+  # Dependency injection
+  get_it: ^8.2.0
+
+  # Navigation
+  go_router: ^16.2.4
+
+  # Local database
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+
+  # Preferences (theme persistence)
+  shared_preferences: ^2.5.3
+
+  # Connectivity / offline mode
+  connectivity_plus: ^7.0.0
+
+  # Formatting/dates
+  intl: ^0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
