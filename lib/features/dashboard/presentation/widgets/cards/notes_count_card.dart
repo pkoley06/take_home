@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../dashboard_card_shell.dart';
 
 class NotesCountCard extends StatelessWidget {
-  const NotesCountCard({super.key});
+  const NotesCountCard({super.key, required this.count});
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +17,7 @@ class NotesCountCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          Text('12', style: theme.textTheme.displaySmall),
+          Text('$count', style: theme.textTheme.displaySmall),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

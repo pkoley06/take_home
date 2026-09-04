@@ -51,7 +51,11 @@ class _DashboardView extends StatelessWidget {
                     context.read<DashboardBloc>().add(const DashboardStarted()),
               );
             case DashboardStatus.loaded:
-              return _DashboardGrid(cards: state.cards);
+              return _DashboardGrid(
+                cards: state.cards,
+                notesCount: state.notesCount,
+                pendingTasksCount: state.pendingTasksCount,
+              );
           }
         },
       ),
@@ -60,9 +64,15 @@ class _DashboardView extends StatelessWidget {
 }
 
 class _DashboardGrid extends StatelessWidget {
-  const _DashboardGrid({required this.cards});
+  const _DashboardGrid({
+    required this.cards,
+    required this.notesCount,
+    required this.pendingTasksCount,
+  });
 
   final List<DashboardCardConfig> cards;
+  final int notesCount;
+  final int pendingTasksCount;
 
   @override
   Widget build(BuildContext context) {
@@ -92,9 +102,9 @@ class _DashboardGrid extends StatelessWidget {
       case DashboardCardType.greeting:
         return const GreetingCard();
       case DashboardCardType.tasksSummary:
-        return const TasksSummaryCard();
+        return TasksSummaryCard(count: pendingTasksCount);
       case DashboardCardType.notesCount:
-        return const NotesCountCard();
+        return NotesCountCard(count: notesCount);
       case DashboardCardType.weather:
         return const WeatherCard();
       case DashboardCardType.waterIntake:

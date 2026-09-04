@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../dashboard_card_shell.dart';
 
 class TasksSummaryCard extends StatelessWidget {
-  const TasksSummaryCard({super.key});
+  const TasksSummaryCard({super.key, required this.count});
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -15,11 +17,11 @@ class TasksSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          Text('3', style: theme.textTheme.displaySmall),
+          Text('$count', style: theme.textTheme.displaySmall),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'tasks due today',
+              'open checklist items',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

@@ -2,6 +2,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/route_paths.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/notes/domain/entities/note.dart';
+import '../../features/notes/presentation/pages/note_editor_page.dart';
 import '../../features/notes/presentation/pages/notes_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import 'app_shell.dart';
@@ -45,6 +47,11 @@ class AppRouter {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: RoutePaths.noteEditor,
+        name: RouteNames.noteEditor,
+        builder: (context, state) => NoteEditorPage(note: state.extra as Note?),
       ),
     ],
   );
