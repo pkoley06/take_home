@@ -27,7 +27,8 @@ class _WaterIntakeCardState extends State<WaterIntakeCard> {
     }
   }
 
-  void _decrement() => setState(() => _glasses = (_glasses - 1).clamp(0, _goal));
+  void _decrement() =>
+      setState(() => _glasses = (_glasses - 1).clamp(0, _goal));
 
   @override
   Widget build(BuildContext context) {
@@ -38,13 +39,19 @@ class _WaterIntakeCardState extends State<WaterIntakeCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$_glasses / $_goal glasses', style: theme.textTheme.titleMedium),
+          Text(
+            '$_glasses / $_goal glasses',
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: _glasses / _goal,
-              minHeight: 6,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: _glasses / _goal),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) =>
+                  LinearProgressIndicator(value: value, minHeight: 6),
             ),
           ),
           const SizedBox(height: 8),

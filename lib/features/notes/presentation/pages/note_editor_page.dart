@@ -17,6 +17,7 @@ import '../../domain/entities/note_image.dart';
 import '../bloc/notes_bloc.dart';
 import '../bloc/notes_event.dart';
 import '../bloc/notes_state.dart';
+import '../widgets/note_card.dart' show noteHeroTag;
 
 class NoteEditorPage extends StatelessWidget {
   const NoteEditorPage({super.key, this.note});
@@ -49,6 +50,8 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
   late List<ChecklistItem> _checklist;
   late List<NoteImage> _images;
   DateTime? _reminderDate;
+  String? _titleError;
+  String? _checklistItemError;
 
   bool get _isEditing => widget.note != null;
 
@@ -72,10 +75,20 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     super.dispose();
   }
 
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _addChecklistItem() {
     final label = _newItemController.text.trim();
-    if (label.isEmpty) return;
+    if (label.isEmpty) {
+      setState(() => _checklistItemError = 'Enter an item first.');
+      return;
+    }
     setState(() {
+      _checklistItemError = null;
       _checklist = [
         ..._checklist,
         ChecklistItem(
@@ -102,7 +115,9 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
 
   void _removeChecklistItem(ChecklistItem item) {
     setState(() {
-      _checklist = _checklist.where((existing) => existing.id != item.id).toList();
+      _checklist = _checklist
+          .where((existing) => existing.id != item.id)
+          .toList();
     });
   }
 
@@ -114,9 +129,8 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
       if (picked != null && mounted) {
         setState(() => _reminderDate = picked);
       }
-    } on NativeChannelUnavailableException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } on NativeChannelUnavailableException catch (_) {
+      _showSnackBar("Couldn't open the date picker.");
     }
   }
 
@@ -128,9 +142,8 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     NativeSheetOption? option;
     try {
       option = await getIt<NativeChannels>().showNativeOptionsSheet();
-    } on NativeChannelUnavailableException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } on NativeChannelUnavailableException catch (_) {
+      _showSnackBar("Couldn't open the attachment options.");
       return;
     }
     if (option == null || !mounted) return; // user dismissed the sheet
@@ -149,33 +162,39 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     if (source == ImageSource.camera) {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Camera permission was denied.')),
-        );
+        _showSnackBar('Camera permission was denied.');
         return;
       }
     }
     try {
-      final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 85,
+      );
       if (picked == null || !mounted) return; // user cancelled the picker
       _appendAttachment(picked.path);
     } on PlatformException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Could not open the camera.')),
+      _showSnackBar(
+        e.message ??
+            (source == ImageSource.camera
+                ? "Couldn't open the camera."
+                : "Couldn't open the gallery."),
       );
     }
   }
 
   Future<void> _pickPdf() async {
-    final picked = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
-    );
-    final path = picked?.path;
-    if (path == null || !mounted) return; // user cancelled the picker
-    _appendAttachment(path);
+    try {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      final path = picked?.path;
+      if (path == null || !mounted) return; // user cancelled the picker
+      _appendAttachment(path);
+    } on PlatformException catch (_) {
+      _showSnackBar("Couldn't open the file picker.");
+    }
   }
 
   void _appendAttachment(String path) {
@@ -196,11 +215,10 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
   void _save() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Give your note a title first.')),
-      );
+      setState(() => _titleError = 'Give your note a title first.');
       return;
     }
+    if (_titleError != null) setState(() => _titleError = null);
 
     final description = _descriptionController.text.trim();
     final resequencedChecklist = [
@@ -259,10 +277,62 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     }
   }
 
+  // A note card in the list becomes this block on open (and back again on
+  // save/close) via a matching Hero tag — only meaningful for an existing
+  // note, since a new one has no list tile to fly from.
+  Widget _buildTitleAndDescription(BuildContext context) {
+    final theme = Theme.of(context);
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _titleController,
+          style: theme.textTheme.titleLarge,
+          decoration: InputDecoration(
+            hintText: 'Title',
+            border: InputBorder.none,
+            errorText: _titleError,
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: (_) {
+            if (_titleError != null) setState(() => _titleError = null);
+          },
+        ),
+        const Divider(),
+        TextField(
+          controller: _descriptionController,
+          minLines: 3,
+          maxLines: 8,
+          decoration: const InputDecoration(
+            hintText: 'Description',
+            border: InputBorder.none,
+          ),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      ],
+    );
+
+    final existing = widget.note;
+    if (existing == null) return content;
+
+    return Hero(
+      tag: noteHeroTag(existing.id),
+      child: Material(
+        type: MaterialType.card,
+        color: theme.cardColor,
+        elevation: 1,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(padding: const EdgeInsets.all(12), child: content),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<NotesBloc, NotesState>(
-      listenWhen: (previous, current) => previous.submission != current.submission,
+      listenWhen: (previous, current) =>
+          previous.submission != current.submission,
       listener: (context, state) {
         if (state.submission == SubmissionStatus.success) {
           Navigator.of(context).pop(true);
@@ -287,11 +357,11 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
                       : Icons.archive_outlined,
                 ),
                 onPressed: () => context.read<NotesBloc>().add(
-                      NoteArchiveToggled(
-                        id: widget.note!.id,
-                        archive: !widget.note!.isArchived,
-                      ),
-                    ),
+                  NoteArchiveToggled(
+                    id: widget.note!.id,
+                    archive: !widget.note!.isArchived,
+                  ),
+                ),
               ),
               IconButton(
                 tooltip: 'Delete',
@@ -309,26 +379,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextField(
-              controller: _titleController,
-              style: Theme.of(context).textTheme.titleLarge,
-              decoration: const InputDecoration(
-                hintText: 'Title',
-                border: InputBorder.none,
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const Divider(),
-            TextField(
-              controller: _descriptionController,
-              minLines: 3,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                hintText: 'Description',
-                border: InputBorder.none,
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
+            _buildTitleAndDescription(context),
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -372,13 +423,20 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
                 ),
               ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: TextField(
                     controller: _newItemController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Add checklist item',
+                      errorText: _checklistItemError,
                     ),
+                    onChanged: (_) {
+                      if (_checklistItemError != null) {
+                        setState(() => _checklistItemError = null);
+                      }
+                    },
                     onSubmitted: (_) => _addChecklistItem(),
                   ),
                 ),
@@ -453,22 +511,14 @@ class _AttachmentThumbnail extends StatelessWidget {
             child: _isPdf
                 ? _PdfCard(file: file, exists: exists)
                 : exists
-                    ? Image.file(
-                        file,
-                        width: 88,
-                        height: 88,
-                        fit: BoxFit.cover,
-                        cacheWidth: 176,
-                      )
-                    : Container(
-                        width: 88,
-                        height: 88,
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
+                ? Image.file(
+                    file,
+                    width: 88,
+                    height: 88,
+                    fit: BoxFit.cover,
+                    cacheWidth: 176,
+                  )
+                : _MissingFileCard(theme: theme),
           ),
           Positioned(
             top: 2,
@@ -496,15 +546,27 @@ class _PdfCard extends StatelessWidget {
 
   String get _fileName => file.uri.pathSegments.last;
 
-  String get _sizeLabel {
-    if (!exists) return '';
-    final kb = file.lengthSync() / 1024;
-    return kb < 1024 ? '${kb.toStringAsFixed(0)} KB' : '${(kb / 1024).toStringAsFixed(1)} MB';
+  // Guards against a TOCTOU race where the file is deleted between the
+  // existsSync() check above and this read — lengthSync() would otherwise
+  // throw a FileSystemException straight out of build().
+  String? get _sizeLabel {
+    if (!exists) return null;
+    try {
+      final kb = file.lengthSync() / 1024;
+      return kb < 1024
+          ? '${kb.toStringAsFixed(0)} KB'
+          : '${(kb / 1024).toStringAsFixed(1)} MB';
+    } on FileSystemException {
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (!exists) return _MissingFileCard(theme: theme, fileName: _fileName);
+
+    final sizeLabel = _sizeLabel;
     return Container(
       width: 88,
       height: 88,
@@ -522,8 +584,47 @@ class _PdfCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall,
           ),
-          if (exists)
-            Text(_sizeLabel, style: theme.textTheme.labelSmall?.copyWith(fontSize: 9)),
+          if (sizeLabel != null)
+            Text(
+              sizeLabel,
+              style: theme.textTheme.labelSmall?.copyWith(fontSize: 9),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of a thumbnail/PDF card when the file behind a note
+/// attachment has been moved or deleted since it was picked — a clear
+/// "this is gone" message instead of a crash or a mysterious blank tile.
+class _MissingFileCard extends StatelessWidget {
+  const _MissingFileCard({required this.theme, this.fileName});
+
+  final ThemeData theme;
+  final String? fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      color: theme.colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image_outlined, color: theme.colorScheme.error),
+          const SizedBox(height: 4),
+          Text(
+            'Missing file',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
         ],
       ),
     );

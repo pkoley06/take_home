@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/error/failure.dart';
+import '../../../../core/error/failure_mapper.dart';
 import '../../../notes/domain/repositories/notes_repository.dart';
 import '../../domain/entities/dashboard_card_config.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -8,7 +10,7 @@ import 'dashboard_state.dart';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   DashboardBloc(this._repository, this._notesRepository)
-      : super(const DashboardState.initial()) {
+    : super(const DashboardState.initial()) {
     on<DashboardStarted>(_onStarted);
     on<DashboardCardsReordered>(_onReordered);
   }
@@ -34,10 +36,13 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         ),
       );
     } catch (e) {
+      final failure = mapExceptionToFailure(e);
       emit(
         state.copyWith(
           status: DashboardStatus.error,
-          errorMessage: 'Could not load your dashboard.',
+          errorMessage: failure is UnknownFailure
+              ? 'Could not load your dashboard.'
+              : failure.message,
         ),
       );
     }
@@ -47,6 +52,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     DashboardCardsReordered event,
     Emitter<DashboardState> emit,
   ) async {
+    final previousCards = state.cards;
     final reordered = List<DashboardCardConfig>.of(state.cards);
     final moved = reordered.removeAt(event.oldIndex);
     reordered.insert(event.newIndex, moved);
@@ -57,6 +63,18 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     ];
 
     emit(state.copyWith(cards: resequenced));
-    await _repository.persistOrder(resequenced);
+    try {
+      await _repository.persistOrder(resequenced);
+    } catch (e) {
+      final failure = mapExceptionToFailure(e);
+      emit(
+        state.copyWith(
+          cards: previousCards,
+          reorderError: failure is UnknownFailure
+              ? 'Could not save the new card order.'
+              : failure.message,
+        ),
+      );
+    }
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/error/failure.dart';
+import '../../../../core/error/failure_mapper.dart';
 import '../../domain/repositories/search_repository.dart';
 import 'search_event.dart';
 import 'search_state.dart';
@@ -16,15 +18,21 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   // overwriting its results, in case two queries are ever in flight together.
   String _latestQuery = '';
 
-  Future<void> _onStarted(SearchStarted event, Emitter<SearchState> emit) async {
+  Future<void> _onStarted(
+    SearchStarted event,
+    Emitter<SearchState> emit,
+  ) async {
     try {
       await _repository.ensureSeeded();
       emit(const SearchState(status: SearchStatus.initial));
     } catch (e) {
+      final failure = mapExceptionToFailure(e);
       emit(
-        const SearchState(
+        SearchState(
           status: SearchStatus.error,
-          errorMessage: 'Could not prepare search.',
+          errorMessage: failure is UnknownFailure
+              ? 'Could not prepare search.'
+              : failure.message,
         ),
       );
     }
@@ -55,11 +63,14 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
     } catch (e) {
       if (query != _latestQuery) return;
+      final failure = mapExceptionToFailure(e);
       emit(
         SearchState(
           status: SearchStatus.error,
           query: query,
-          errorMessage: 'Search failed. Try again.',
+          errorMessage: failure is UnknownFailure
+              ? 'Search failed. Try again.'
+              : failure.message,
         ),
       );
     }

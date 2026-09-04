@@ -11,6 +11,7 @@ class DashboardState extends Equatable {
     this.errorMessage,
     this.notesCount = 0,
     this.pendingTasksCount = 0,
+    this.reorderError,
   });
 
   const DashboardState.initial() : this(status: DashboardStatus.initial);
@@ -20,6 +21,9 @@ class DashboardState extends Equatable {
   final String? errorMessage;
   final int notesCount;
   final int pendingTasksCount;
+  // Transient: a reorder that failed to persist. The card order is reverted
+  // in the same emit, this just carries the message for a one-shot SnackBar.
+  final String? reorderError;
 
   DashboardState copyWith({
     DashboardStatus? status,
@@ -27,6 +31,7 @@ class DashboardState extends Equatable {
     String? errorMessage,
     int? notesCount,
     int? pendingTasksCount,
+    String? reorderError,
   }) {
     return DashboardState(
       status: status ?? this.status,
@@ -34,10 +39,17 @@ class DashboardState extends Equatable {
       errorMessage: errorMessage,
       notesCount: notesCount ?? this.notesCount,
       pendingTasksCount: pendingTasksCount ?? this.pendingTasksCount,
+      reorderError: reorderError,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [status, cards, errorMessage, notesCount, pendingTasksCount];
+  List<Object?> get props => [
+    status,
+    cards,
+    errorMessage,
+    notesCount,
+    pendingTasksCount,
+    reorderError,
+  ];
 }

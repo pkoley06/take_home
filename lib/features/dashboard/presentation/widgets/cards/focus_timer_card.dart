@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -13,17 +14,28 @@ class FocusTimerCard extends StatefulWidget {
   State<FocusTimerCard> createState() => _FocusTimerCardState();
 }
 
-class _FocusTimerCardState extends State<FocusTimerCard> {
+class _FocusTimerCardState extends State<FocusTimerCard>
+    with SingleTickerProviderStateMixin {
   static const _defaultDuration = Duration(minutes: 25);
 
   Duration _remaining = _defaultDuration;
   Timer? _timer;
+
+  // Drives the progress ring independently of the once-a-second countdown
+  // timer, so the ring sweeps smoothly instead of jumping in 1-second
+  // increments — its value always tracks the elapsed fraction of the session.
+  late final AnimationController _ringController = AnimationController(
+    vsync: this,
+    duration: _defaultDuration,
+  );
 
   bool get _isRunning => _timer != null;
 
   void _start() {
     if (_isRunning) return;
     if (_remaining == Duration.zero) _remaining = _defaultDuration;
+    _ringController.duration = _remaining;
+    _ringController.forward(from: _ringController.value);
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         if (_remaining.inSeconds <= 1) {
@@ -44,12 +56,14 @@ class _FocusTimerCardState extends State<FocusTimerCard> {
   void _pause() {
     _timer?.cancel();
     _timer = null;
+    _ringController.stop();
     setState(() {});
   }
 
   void _reset() {
     _timer?.cancel();
     _timer = null;
+    _ringController.value = 0;
     setState(() => _remaining = _defaultDuration);
   }
 
@@ -62,6 +76,7 @@ class _FocusTimerCardState extends State<FocusTimerCard> {
   @override
   void dispose() {
     _timer?.cancel();
+    _ringController.dispose();
     super.dispose();
   }
 
@@ -74,7 +89,26 @@ class _FocusTimerCardState extends State<FocusTimerCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_format(_remaining), style: theme.textTheme.displaySmall),
+          Row(
+            children: [
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: AnimatedBuilder(
+                  animation: _ringController,
+                  builder: (context, _) => CustomPaint(
+                    painter: _RingPainter(
+                      progress: _ringController.value,
+                      trackColor: theme.colorScheme.surfaceContainerHighest,
+                      progressColor: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(_format(_remaining), style: theme.textTheme.displaySmall),
+            ],
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -91,4 +125,48 @@ class _FocusTimerCardState extends State<FocusTimerCard> {
       ),
     );
   }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter({
+    required this.progress,
+    required this.trackColor,
+    required this.progressColor,
+  });
+
+  final double progress;
+  final Color trackColor;
+  final Color progressColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = math.min(size.width, size.height) / 2 - 3;
+
+    final track = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+    canvas.drawCircle(center, radius, track);
+
+    if (progress <= 0) return;
+    final arc = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0, 1),
+      false,
+      arc,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.trackColor != trackColor ||
+      oldDelegate.progressColor != progressColor;
 }

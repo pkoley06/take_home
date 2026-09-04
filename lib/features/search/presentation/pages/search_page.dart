@@ -48,6 +48,35 @@ class _SearchViewState extends State<_SearchView> {
     });
   }
 
+  Widget _buildBody(BuildContext context, SearchState state) {
+    switch (state.status) {
+      case SearchStatus.initial:
+        return const EmptyState(
+          icon: Icons.search,
+          message: 'Start typing to search.',
+        );
+      case SearchStatus.loading:
+        return const _SearchSkeleton();
+      case SearchStatus.empty:
+        return EmptyState(
+          icon: Icons.search_off,
+          message: 'No results for "${state.query}".',
+        );
+      case SearchStatus.error:
+        return ErrorState(
+          message: state.errorMessage ?? 'Search failed.',
+          onRetry: () =>
+              context.read<SearchBloc>().add(SearchQueryChanged(state.query)),
+        );
+      case SearchStatus.loaded:
+        return ListView.builder(
+          itemCount: state.results.length,
+          itemBuilder: (context, index) =>
+              SearchResultTile(item: state.results[index], query: state.query),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -68,35 +97,13 @@ class _SearchViewState extends State<_SearchView> {
             Expanded(
               child: BlocBuilder<SearchBloc, SearchState>(
                 builder: (context, state) {
-                  switch (state.status) {
-                    case SearchStatus.initial:
-                      return const EmptyState(
-                        icon: Icons.search,
-                        message: 'Start typing to search.',
-                      );
-                    case SearchStatus.loading:
-                      return const _SearchSkeleton();
-                    case SearchStatus.empty:
-                      return EmptyState(
-                        icon: Icons.search_off,
-                        message: 'No results for "${state.query}".',
-                      );
-                    case SearchStatus.error:
-                      return ErrorState(
-                        message: state.errorMessage ?? 'Search failed.',
-                        onRetry: () => context.read<SearchBloc>().add(
-                              SearchQueryChanged(state.query),
-                            ),
-                      );
-                    case SearchStatus.loaded:
-                      return ListView.builder(
-                        itemCount: state.results.length,
-                        itemBuilder: (context, index) => SearchResultTile(
-                          item: state.results[index],
-                          query: state.query,
-                        ),
-                      );
-                  }
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: KeyedSubtree(
+                      key: ValueKey(state.status),
+                      child: _buildBody(context, state),
+                    ),
+                  );
                 },
               ),
             ),

@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/error/failure.dart';
+import '../../../../core/error/failure_mapper.dart';
 import '../../domain/repositories/notes_repository.dart';
 import 'notes_event.dart';
 import 'notes_state.dart';
@@ -74,10 +76,13 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
       await action();
       await _reload(emit, submission: SubmissionStatus.success);
     } catch (e) {
+      final failure = mapExceptionToFailure(e);
       emit(
         state.copyWith(
           submission: SubmissionStatus.failure,
-          submissionError: failureMessage,
+          submissionError: failure is UnknownFailure
+              ? failureMessage
+              : failure.message,
         ),
       );
     }
@@ -99,10 +104,13 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
         ),
       );
     } catch (e) {
+      final failure = mapExceptionToFailure(e);
       emit(
         state.copyWith(
           status: NotesStatus.error,
-          errorMessage: 'Could not load your notes.',
+          errorMessage: failure is UnknownFailure
+              ? 'Could not load your notes.'
+              : failure.message,
         ),
       );
     }
