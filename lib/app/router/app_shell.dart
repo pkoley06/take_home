@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/sync/sync_cubit.dart';
+import '../../core/widgets/sync_banner.dart';
 import '../di/injection.dart';
 import '../theme/theme_cubit.dart';
 
@@ -19,6 +22,19 @@ class AppShell extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Smart Workspace'),
         actions: [
+          if (kDebugMode)
+            BlocBuilder<SyncCubit, SyncState>(
+              bloc: getIt<SyncCubit>(),
+              builder: (context, state) {
+                return IconButton(
+                  tooltip: state.isOnline
+                      ? 'Simulate offline (debug)'
+                      : 'Simulate online (debug)',
+                  icon: Icon(state.isOnline ? Icons.wifi : Icons.wifi_off),
+                  onPressed: () => getIt<SyncCubit>().toggleDebugOffline(),
+                );
+              },
+            ),
           BlocBuilder<ThemeCubit, ThemeState>(
             bloc: getIt<ThemeCubit>(),
             builder: (context, state) {
@@ -32,7 +48,12 @@ class AppShell extends StatelessWidget {
           ),
         ],
       ),
-      body: navigationShell,
+      body: Column(
+        children: [
+          const SyncBanner(),
+          Expanded(child: navigationShell),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) => navigationShell.goBranch(

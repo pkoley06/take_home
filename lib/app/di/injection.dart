@@ -1,6 +1,9 @@
 import 'package:get_it/get_it.dart';
 
 import '../../core/database/app_database.dart';
+import '../../core/network/connectivity_service.dart';
+import '../../core/sync/sync_cubit.dart';
+import '../../core/sync/sync_queue.dart';
 import '../../features/dashboard/data/datasources/dashboard_local_datasource.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -23,18 +26,27 @@ Future<void> setupInjection() async {
   getIt.registerLazySingleton<ThemeCubit>(() => ThemeCubit());
   await getIt<ThemeCubit>().loadSaved();
 
+  getIt.registerLazySingleton<ConnectivityService>(() => ConnectivityService());
+  getIt.registerLazySingleton<SyncQueue>(
+    () => SyncQueue(getIt<AppDatabase>()),
+  );
+  getIt.registerLazySingleton<SyncCubit>(
+    () => SyncCubit(getIt<ConnectivityService>(), getIt<SyncQueue>()),
+  );
+  await getIt<SyncCubit>().init();
+
   getIt.registerLazySingleton<DashboardLocalDatasource>(
     () => DashboardLocalDatasource(getIt<AppDatabase>()),
   );
   getIt.registerLazySingleton<DashboardRepository>(
-    () => DashboardRepositoryImpl(getIt<DashboardLocalDatasource>()),
+    () => DashboardRepositoryImpl(getIt<DashboardLocalDatasource>(), getIt<SyncQueue>()),
   );
 
   getIt.registerLazySingleton<NotesLocalDatasource>(
     () => NotesLocalDatasource(getIt<AppDatabase>()),
   );
   getIt.registerLazySingleton<NotesRepository>(
-    () => NotesRepositoryImpl(getIt<NotesLocalDatasource>()),
+    () => NotesRepositoryImpl(getIt<NotesLocalDatasource>(), getIt<SyncQueue>()),
   );
   getIt.registerFactory<NotesBloc>(() => NotesBloc(getIt<NotesRepository>()));
 
