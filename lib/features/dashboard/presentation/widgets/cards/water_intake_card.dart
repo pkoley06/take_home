@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/di/injection.dart';
+import '../../../../../core/notifications/notification_service.dart';
 import '../dashboard_card_shell.dart';
 
 class WaterIntakeCard extends StatefulWidget {
@@ -14,7 +16,16 @@ class _WaterIntakeCardState extends State<WaterIntakeCard> {
 
   int _glasses = 0;
 
-  void _increment() => setState(() => _glasses = (_glasses + 1).clamp(0, _goal));
+  void _increment() {
+    final reachedGoal = _glasses == _goal - 1;
+    setState(() => _glasses = (_glasses + 1).clamp(0, _goal));
+    if (reachedGoal) {
+      getIt<NotificationService>().showProgress(
+        title: 'Water goal reached',
+        body: 'You hit $_goal / $_goal glasses today.',
+      );
+    }
+  }
 
   void _decrement() => setState(() => _glasses = (_glasses - 1).clamp(0, _goal));
 

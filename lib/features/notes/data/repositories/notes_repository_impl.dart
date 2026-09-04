@@ -1,4 +1,5 @@
 import '../../../../core/constants/db_constants.dart';
+import '../../../../core/notifications/notification_service.dart';
 import '../../../../core/sync/sync_queue.dart';
 import '../../../../core/utils/id_generator.dart';
 import '../../domain/entities/checklist_item.dart';
@@ -10,10 +11,23 @@ import '../models/note_image_model.dart';
 import '../models/note_model.dart';
 
 class NotesRepositoryImpl implements NotesRepository {
-  NotesRepositoryImpl(this._datasource, this._syncQueue);
+  NotesRepositoryImpl(this._datasource, this._syncQueue, this._notifications);
 
   final NotesLocalDatasource _datasource;
   final SyncQueue _syncQueue;
+  final NotificationService _notifications;
+
+  Future<void> _syncReminder(NoteModel note) {
+    final reminderDate = note.reminderDate;
+    if (reminderDate == null) {
+      return _notifications.cancelNoteReminder(note.id);
+    }
+    return _notifications.scheduleNoteReminder(
+      noteId: note.id,
+      noteTitle: note.title,
+      date: reminderDate,
+    );
+  }
 
   @override
   Future<List<Note>> getActiveNotes() => _datasource.getNotes(archived: false);
@@ -49,6 +63,7 @@ class NotesRepositoryImpl implements NotesRepository {
       operation: 'create',
       payload: {'id': note.id},
     );
+    await _syncReminder(note);
     return note;
   }
 
@@ -61,6 +76,7 @@ class NotesRepositoryImpl implements NotesRepository {
       operation: 'update',
       payload: {'id': updated.id},
     );
+    await _syncReminder(updated);
     return updated;
   }
 
@@ -72,6 +88,7 @@ class NotesRepositoryImpl implements NotesRepository {
       operation: 'delete',
       payload: {'id': id},
     );
+    await _notifications.cancelNoteReminder(id);
   }
 
   @override

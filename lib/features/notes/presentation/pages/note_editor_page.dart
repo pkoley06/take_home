@@ -1,8 +1,12 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/platform/native_channels.dart';
@@ -131,21 +135,54 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     }
     if (option == null || !mounted) return; // user dismissed the sheet
 
-    // No real camera/gallery/file picker wired up yet, so the chosen source
-    // only tags the placeholder attachment for now.
-    final sourceLabel = switch (option) {
-      NativeSheetOption.camera => 'camera',
-      NativeSheetOption.gallery => 'gallery',
-      NativeSheetOption.filePicker => 'file',
-    };
+    switch (option) {
+      case NativeSheetOption.camera:
+        await _pickImage(ImageSource.camera);
+      case NativeSheetOption.gallery:
+        await _pickImage(ImageSource.gallery);
+      case NativeSheetOption.filePicker:
+        await _pickPdf();
+    }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Camera permission was denied.')),
+        );
+        return;
+      }
+    }
+    try {
+      final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
+      if (picked == null || !mounted) return; // user cancelled the picker
+      _appendAttachment(picked.path);
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Could not open the camera.')),
+      );
+    }
+  }
+
+  Future<void> _pickPdf() async {
+    final picked = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    final path = picked?.path;
+    if (path == null || !mounted) return; // user cancelled the picker
+    _appendAttachment(path);
+  }
+
+  void _appendAttachment(String path) {
     setState(() {
       _images = [
         ..._images,
-        NoteImage(
-          id: generateId(),
-          filePath: 'stub://$sourceLabel-${generateId()}.jpg',
-          createdAt: DateTime.now(),
-        ),
+        NoteImage(id: generateId(), filePath: path, createdAt: DateTime.now()),
       ];
     });
   }
@@ -362,7 +399,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
                   for (final image in _images)
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
-                      child: _ImageThumbnail(
+                      child: _AttachmentThumbnail(
                         image: image,
                         onRemove: () => _removeImage(image),
                       ),
@@ -392,16 +429,19 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
   }
 }
 
-class _ImageThumbnail extends StatelessWidget {
-  const _ImageThumbnail({required this.image, required this.onRemove});
+class _AttachmentThumbnail extends StatelessWidget {
+  const _AttachmentThumbnail({required this.image, required this.onRemove});
 
   final NoteImage image;
   final VoidCallback onRemove;
+
+  bool get _isPdf => image.filePath.toLowerCase().endsWith('.pdf');
 
   @override
   Widget build(BuildContext context) {
     final file = File(image.filePath);
     final exists = file.existsSync();
+    final theme = Theme.of(context);
 
     return SizedBox(
       width: 88,
@@ -410,23 +450,25 @@ class _ImageThumbnail extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: exists
-                ? Image.file(
-                    file,
-                    width: 88,
-                    height: 88,
-                    fit: BoxFit.cover,
-                    cacheWidth: 176,
-                  )
-                : Container(
-                    width: 88,
-                    height: 88,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.image_outlined,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
+            child: _isPdf
+                ? _PdfCard(file: file, exists: exists)
+                : exists
+                    ? Image.file(
+                        file,
+                        width: 88,
+                        height: 88,
+                        fit: BoxFit.cover,
+                        cacheWidth: 176,
+                      )
+                    : Container(
+                        width: 88,
+                        height: 88,
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
           ),
           Positioned(
             top: 2,
@@ -440,6 +482,48 @@ class _ImageThumbnail extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PdfCard extends StatelessWidget {
+  const _PdfCard({required this.file, required this.exists});
+
+  final File file;
+  final bool exists;
+
+  String get _fileName => file.uri.pathSegments.last;
+
+  String get _sizeLabel {
+    if (!exists) return '';
+    final kb = file.lengthSync() / 1024;
+    return kb < 1024 ? '${kb.toStringAsFixed(0)} KB' : '${(kb / 1024).toStringAsFixed(1)} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: 88,
+      height: 88,
+      color: theme.colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.picture_as_pdf_outlined, color: theme.colorScheme.outline),
+          const SizedBox(height: 4),
+          Text(
+            _fileName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall,
+          ),
+          if (exists)
+            Text(_sizeLabel, style: theme.textTheme.labelSmall?.copyWith(fontSize: 9)),
         ],
       ),
     );

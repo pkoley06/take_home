@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../../app/di/injection.dart';
+import '../../../../../core/notifications/notification_service.dart';
 import '../dashboard_card_shell.dart';
 
 class FocusTimerCard extends StatefulWidget {
@@ -27,6 +29,10 @@ class _FocusTimerCardState extends State<FocusTimerCard> {
         if (_remaining.inSeconds <= 1) {
           _remaining = Duration.zero;
           _pause();
+          getIt<NotificationService>().showProgress(
+            title: 'Focus session complete',
+            body: 'Nice work — take a short break.',
+          );
         } else {
           _remaining -= const Duration(seconds: 1);
         }
