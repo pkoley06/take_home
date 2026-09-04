@@ -22,10 +22,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     DashboardStarted event,
     Emitter<DashboardState> emit,
   ) async {
-    if (state.status == DashboardStatus.loaded) return;
-    emit(state.copyWith(status: DashboardStatus.loading));
+    final alreadyLoaded = state.status == DashboardStatus.loaded;
+    if (!alreadyLoaded) {
+      emit(state.copyWith(status: DashboardStatus.loading));
+    }
     try {
-      final cards = await _repository.loadCards();
+      final cards = alreadyLoaded
+          ? state.cards
+          : await _repository.loadCards();
       final stats = await _notesRepository.getStats();
       emit(
         state.copyWith(
@@ -39,7 +43,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final failure = mapExceptionToFailure(e);
       emit(
         state.copyWith(
-          status: DashboardStatus.error,
+          status: alreadyLoaded ? DashboardStatus.loaded : DashboardStatus.error,
           errorMessage: failure is UnknownFailure
               ? 'Could not load your dashboard.'
               : failure.message,

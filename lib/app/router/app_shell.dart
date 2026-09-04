@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/sync/sync_cubit.dart';
 import '../../core/widgets/sync_banner.dart';
+import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import '../../features/dashboard/presentation/bloc/dashboard_event.dart';
 import '../di/injection.dart';
 import '../theme/theme_cubit.dart';
 
@@ -56,10 +58,15 @@ class AppShell extends StatelessWidget {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
+        onDestinationSelected: (index) {
+          if (index == 0) {
+            getIt<DashboardBloc>().add(const DashboardStarted());
+          }
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
