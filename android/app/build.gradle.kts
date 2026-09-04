@@ -47,3 +47,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Needed for BottomSheetDialog, used by the native options sheet.
+    implementation("com.google.android.material:material:1.12.0")
+}

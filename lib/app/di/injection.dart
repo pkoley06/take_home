@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/network/connectivity_service.dart';
+import '../../core/platform/native_channels.dart';
 import '../../core/sync/sync_cubit.dart';
 import '../../core/sync/sync_queue.dart';
 import '../../features/dashboard/data/datasources/dashboard_local_datasource.dart';
@@ -27,6 +28,7 @@ Future<void> setupInjection() async {
   await getIt<ThemeCubit>().loadSaved();
 
   getIt.registerLazySingleton<ConnectivityService>(() => ConnectivityService());
+  getIt.registerLazySingleton<NativeChannels>(() => const NativeChannels());
   getIt.registerLazySingleton<SyncQueue>(
     () => SyncQueue(getIt<AppDatabase>()),
   );
