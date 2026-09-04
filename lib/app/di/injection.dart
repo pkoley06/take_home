@@ -9,6 +9,10 @@ import '../../features/notes/data/datasources/notes_local_datasource.dart';
 import '../../features/notes/data/repositories/notes_repository_impl.dart';
 import '../../features/notes/domain/repositories/notes_repository.dart';
 import '../../features/notes/presentation/bloc/notes_bloc.dart';
+import '../../features/search/data/datasources/search_local_datasource.dart';
+import '../../features/search/data/repositories/search_repository_impl.dart';
+import '../../features/search/domain/repositories/search_repository.dart';
+import '../../features/search/presentation/bloc/search_bloc.dart';
 import '../theme/theme_cubit.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -33,6 +37,14 @@ Future<void> setupInjection() async {
     () => NotesRepositoryImpl(getIt<NotesLocalDatasource>()),
   );
   getIt.registerFactory<NotesBloc>(() => NotesBloc(getIt<NotesRepository>()));
+
+  getIt.registerLazySingleton<SearchLocalDatasource>(
+    () => SearchLocalDatasource(getIt<AppDatabase>()),
+  );
+  getIt.registerLazySingleton<SearchRepository>(
+    () => SearchRepositoryImpl(getIt<SearchLocalDatasource>()),
+  );
+  getIt.registerFactory<SearchBloc>(() => SearchBloc(getIt<SearchRepository>()));
 
   getIt.registerLazySingleton<DashboardBloc>(
     () => DashboardBloc(getIt<DashboardRepository>(), getIt<NotesRepository>()),
