@@ -6,12 +6,16 @@ plugins {
 
 android {
     namespace = "com.example.take_home"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android needs compileSdk 37; flutter.compileSdkVersion
+    // (36) isn't there yet, so it's pinned explicitly rather than left dynamic.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Scheduled notifications need this even when the app doesn't touch java.time itself.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -51,4 +55,5 @@ flutter {
 dependencies {
     // Needed for BottomSheetDialog, used by the native options sheet.
     implementation("com.google.android.material:material:1.12.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

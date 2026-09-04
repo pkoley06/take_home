@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/database/app_database.dart';
 import '../../core/network/connectivity_service.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../core/platform/native_channels.dart';
 import '../../core/sync/sync_cubit.dart';
 import '../../core/sync/sync_queue.dart';
@@ -29,6 +30,10 @@ Future<void> setupInjection() async {
 
   getIt.registerLazySingleton<ConnectivityService>(() => ConnectivityService());
   getIt.registerLazySingleton<NativeChannels>(() => const NativeChannels());
+
+  getIt.registerLazySingleton<NotificationService>(() => NotificationService());
+  await getIt<NotificationService>().init();
+  await getIt<NotificationService>().scheduleDailyReminder();
   getIt.registerLazySingleton<SyncQueue>(
     () => SyncQueue(getIt<AppDatabase>()),
   );
@@ -48,7 +53,11 @@ Future<void> setupInjection() async {
     () => NotesLocalDatasource(getIt<AppDatabase>()),
   );
   getIt.registerLazySingleton<NotesRepository>(
-    () => NotesRepositoryImpl(getIt<NotesLocalDatasource>(), getIt<SyncQueue>()),
+    () => NotesRepositoryImpl(
+      getIt<NotesLocalDatasource>(),
+      getIt<SyncQueue>(),
+      getIt<NotificationService>(),
+    ),
   );
   getIt.registerFactory<NotesBloc>(() => NotesBloc(getIt<NotesRepository>()));
 
