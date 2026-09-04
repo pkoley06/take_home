@@ -55,80 +55,95 @@ class _NotesViewState extends State<_NotesView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openEditor(context),
-        tooltip: 'New note',
-        child: const Icon(Icons.add),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Active'),
-                Tab(text: 'Archived'),
-              ],
-            ),
-            Expanded(
-              child: BlocBuilder<NotesBloc, NotesState>(
-                builder: (context, state) {
-                  switch (state.status) {
-                    case NotesStatus.initial:
-                    case NotesStatus.loading:
-                      return const _NotesSkeleton();
-                    case NotesStatus.error:
-                      return ErrorState(
-                        message:
-                            state.errorMessage ?? 'Could not load your notes.',
-                        onRetry: () => context.read<NotesBloc>().add(
-                              const NotesStarted(),
-                            ),
-                      );
-                    case NotesStatus.loaded:
-                      return TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _NotesGrid(
-                            notes: state.activeNotes,
-                            emptyMessage: 'Your notes will show up here.',
-                            onTap: (note) => _openEditor(context, note: note),
-                            archiveIcon: Icons.archive_outlined,
-                            archiveTooltip: 'Archive',
-                            onArchive: (note) => context.read<NotesBloc>().add(
-                                  NoteArchiveToggled(
-                                    id: note.id,
-                                    archive: true,
-                                  ),
-                                ),
-                            onDelete: (note) => context.read<NotesBloc>().add(
-                                  NoteDeleted(note.id),
-                                ),
-                          ),
-                          _NotesGrid(
-                            notes: state.archivedNotes,
-                            emptyMessage: 'No archived notes yet.',
-                            onTap: (note) => _openEditor(context, note: note),
-                            archiveIcon: Icons.unarchive_outlined,
-                            archiveTooltip: 'Unarchive',
-                            onArchive: (note) => context.read<NotesBloc>().add(
-                                  NoteArchiveToggled(
-                                    id: note.id,
-                                    archive: false,
-                                  ),
-                                ),
-                            onDelete: (note) => context.read<NotesBloc>().add(
-                                  NoteDeleted(note.id),
-                                ),
-                          ),
-                        ],
-                      );
-                  }
-                },
+    return BlocListener<NotesBloc, NotesState>(
+      listenWhen: (previous, current) =>
+          current.submission == SubmissionStatus.failure &&
+          previous.submission != SubmissionStatus.failure,
+      listener: (context, state) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(state.submissionError ?? 'Something went wrong.'),
+          ),
+        );
+      },
+      child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _openEditor(context),
+          tooltip: 'New note',
+          child: const Icon(Icons.add),
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Active'),
+                  Tab(text: 'Archived'),
+                ],
               ),
-            ),
-          ],
+              Expanded(
+                child: BlocBuilder<NotesBloc, NotesState>(
+                  builder: (context, state) {
+                    switch (state.status) {
+                      case NotesStatus.initial:
+                      case NotesStatus.loading:
+                        return const _NotesSkeleton();
+                      case NotesStatus.error:
+                        return ErrorState(
+                          message:
+                              state.errorMessage ??
+                              'Could not load your notes.',
+                          onRetry: () => context.read<NotesBloc>().add(
+                            const NotesStarted(),
+                          ),
+                        );
+                      case NotesStatus.loaded:
+                        return TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _NotesGrid(
+                              notes: state.activeNotes,
+                              emptyMessage: 'Your notes will show up here.',
+                              onTap: (note) => _openEditor(context, note: note),
+                              archiveIcon: Icons.archive_outlined,
+                              archiveTooltip: 'Archive',
+                              onArchive: (note) =>
+                                  context.read<NotesBloc>().add(
+                                    NoteArchiveToggled(
+                                      id: note.id,
+                                      archive: true,
+                                    ),
+                                  ),
+                              onDelete: (note) => context.read<NotesBloc>().add(
+                                NoteDeleted(note.id),
+                              ),
+                            ),
+                            _NotesGrid(
+                              notes: state.archivedNotes,
+                              emptyMessage: 'No archived notes yet.',
+                              onTap: (note) => _openEditor(context, note: note),
+                              archiveIcon: Icons.unarchive_outlined,
+                              archiveTooltip: 'Unarchive',
+                              onArchive: (note) =>
+                                  context.read<NotesBloc>().add(
+                                    NoteArchiveToggled(
+                                      id: note.id,
+                                      archive: false,
+                                    ),
+                                  ),
+                              onDelete: (note) => context.read<NotesBloc>().add(
+                                NoteDeleted(note.id),
+                              ),
+                            ),
+                          ],
+                        );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

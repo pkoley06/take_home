@@ -31,10 +31,14 @@ class NotificationService {
       );
 
       await _plugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.requestNotificationsPermission();
       await _plugin
-          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >()
           ?.requestPermissions(alert: true, badge: true, sound: true);
       _available = true;
     } catch (_) {
@@ -42,22 +46,36 @@ class NotificationService {
     }
   }
 
-  Future<void> scheduleDailyReminder({int hour = 9, int minute = 0}) {
-    if (!_available) return Future.value();
-    return _plugin.zonedSchedule(
-      id: dailyReminderId,
-      title: 'Smart Workspace',
-      body: 'Check your notes and tasks for today.',
-      scheduledDate: _nextInstanceOf(hour, minute),
-      notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+  // Every method below is fired automatically (app start, a note save, a
+  // timer completing) with no user gesture attached to react to a failure,
+  // so — same call as init() above — a plugin error here is swallowed
+  // rather than thrown: there's no sensible UI to surface it on, and the
+  // caller (e.g. a repository save) shouldn't fail just because a
+  // best-effort reminder couldn't be scheduled.
+  Future<void> scheduleDailyReminder({int hour = 9, int minute = 0}) async {
+    if (!_available) return;
+    try {
+      await _plugin.zonedSchedule(
+        id: dailyReminderId,
+        title: 'Smart Workspace',
+        body: 'Check your notes and tasks for today.',
+        scheduledDate: _nextInstanceOf(hour, minute),
+        notificationDetails: _details(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (_) {
+      // Best-effort — see method doc comment.
+    }
   }
 
-  Future<void> cancelDailyReminder() {
-    if (!_available) return Future.value();
-    return _plugin.cancel(id: dailyReminderId);
+  Future<void> cancelDailyReminder() async {
+    if (!_available) return;
+    try {
+      await _plugin.cancel(id: dailyReminderId);
+    } catch (_) {
+      // Best-effort — see method doc comment.
+    }
   }
 
   Future<void> scheduleNoteReminder({
@@ -67,31 +85,52 @@ class NotificationService {
     int hour = 9,
   }) async {
     if (!_available) return;
-    final scheduled = tz.TZDateTime(tz.local, date.year, date.month, date.day, hour);
+    final scheduled = tz.TZDateTime(
+      tz.local,
+      date.year,
+      date.month,
+      date.day,
+      hour,
+    );
     if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
-    await _plugin.zonedSchedule(
-      id: _idForNote(noteId),
-      title: 'Reminder: ${noteTitle.isEmpty ? 'Untitled note' : noteTitle}',
-      body: 'This note is due today.',
-      scheduledDate: scheduled,
-      notificationDetails: _details(),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-    );
+    try {
+      await _plugin.zonedSchedule(
+        id: _idForNote(noteId),
+        title: 'Reminder: ${noteTitle.isEmpty ? 'Untitled note' : noteTitle}',
+        body: 'This note is due today.',
+        scheduledDate: scheduled,
+        notificationDetails: _details(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (_) {
+      // Best-effort — see method doc comment.
+    }
   }
 
-  Future<void> cancelNoteReminder(String noteId) {
-    if (!_available) return Future.value();
-    return _plugin.cancel(id: _idForNote(noteId));
+  Future<void> cancelNoteReminder(String noteId) async {
+    if (!_available) return;
+    try {
+      await _plugin.cancel(id: _idForNote(noteId));
+    } catch (_) {
+      // Best-effort — see method doc comment.
+    }
   }
 
-  Future<void> showProgress({required String title, required String body}) {
-    if (!_available) return Future.value();
-    return _plugin.show(
-      id: DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
-      title: title,
-      body: body,
-      notificationDetails: _details(),
-    );
+  Future<void> showProgress({
+    required String title,
+    required String body,
+  }) async {
+    if (!_available) return;
+    try {
+      await _plugin.show(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(1 << 31),
+        title: title,
+        body: body,
+        notificationDetails: _details(),
+      );
+    } catch (_) {
+      // Best-effort — see method doc comment.
+    }
   }
 
   NotificationDetails _details() {
@@ -103,7 +142,14 @@ class NotificationService {
 
   tz.TZDateTime _nextInstanceOf(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }

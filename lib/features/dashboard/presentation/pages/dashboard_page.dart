@@ -38,27 +38,37 @@ class _DashboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          switch (state.status) {
-            case DashboardStatus.initial:
-            case DashboardStatus.loading:
-              return const _DashboardSkeleton();
-            case DashboardStatus.error:
-              return ErrorState(
-                message:
-                    state.errorMessage ?? 'Could not load your dashboard.',
-                onRetry: () =>
-                    context.read<DashboardBloc>().add(const DashboardStarted()),
-              );
-            case DashboardStatus.loaded:
-              return _DashboardGrid(
-                cards: state.cards,
-                notesCount: state.notesCount,
-                pendingTasksCount: state.pendingTasksCount,
-              );
-          }
+      child: BlocListener<DashboardBloc, DashboardState>(
+        listenWhen: (previous, current) =>
+            current.reorderError != null &&
+            current.reorderError != previous.reorderError,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(state.reorderError!)));
         },
+        child: BlocBuilder<DashboardBloc, DashboardState>(
+          builder: (context, state) {
+            switch (state.status) {
+              case DashboardStatus.initial:
+              case DashboardStatus.loading:
+                return const _DashboardSkeleton();
+              case DashboardStatus.error:
+                return ErrorState(
+                  message:
+                      state.errorMessage ?? 'Could not load your dashboard.',
+                  onRetry: () => context.read<DashboardBloc>().add(
+                    const DashboardStarted(),
+                  ),
+                );
+              case DashboardStatus.loaded:
+                return _DashboardGrid(
+                  cards: state.cards,
+                  notesCount: state.notesCount,
+                  pendingTasksCount: state.pendingTasksCount,
+                );
+            }
+          },
+        ),
       ),
     );
   }
