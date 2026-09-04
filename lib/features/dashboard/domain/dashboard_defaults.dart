@@ -8,6 +8,7 @@ const List<DashboardCardType> kDefaultDashboardCardOrder = [
   DashboardCardType.weather,
   DashboardCardType.waterIntake,
   DashboardCardType.focusTimer,
+  DashboardCardType.deviceInfo,
 ];
 
 List<DashboardCardConfig> buildDefaultDashboardCards() {

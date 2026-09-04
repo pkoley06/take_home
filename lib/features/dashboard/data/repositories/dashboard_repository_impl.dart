@@ -15,13 +15,24 @@ class DashboardRepositoryImpl implements DashboardRepository {
   @override
   Future<List<DashboardCardConfig>> loadCards() async {
     final existing = await _datasource.getCards();
-    if (existing.isNotEmpty) return existing;
+    if (existing.isEmpty) {
+      final defaults = buildDefaultDashboardCards()
+          .map(DashboardCardModel.fromEntity)
+          .toList();
+      await _datasource.upsertAll(defaults);
+      return defaults;
+    }
 
-    final defaults = buildDefaultDashboardCards()
-        .map(DashboardCardModel.fromEntity)
-        .toList();
-    await _datasource.upsertAll(defaults);
-    return defaults;
+    final knownTypes = existing.map((card) => card.type).toSet();
+    final missing = [
+      for (final type in kDefaultDashboardCardOrder)
+        if (!knownTypes.contains(type))
+          DashboardCardModel(type: type, sortOrder: existing.length),
+    ];
+    if (missing.isEmpty) return existing;
+
+    await _datasource.upsertAll(missing);
+    return [...existing, ...missing];
   }
 
   @override

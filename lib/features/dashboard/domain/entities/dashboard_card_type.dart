@@ -5,4 +5,5 @@ enum DashboardCardType {
   weather,
   waterIntake,
   focusTimer,
+  deviceInfo,
 }

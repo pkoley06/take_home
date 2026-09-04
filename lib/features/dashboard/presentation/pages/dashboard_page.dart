@@ -10,6 +10,7 @@ import '../../domain/entities/dashboard_card_type.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
+import '../widgets/cards/device_info_card.dart';
 import '../widgets/cards/focus_timer_card.dart';
 import '../widgets/cards/greeting_card.dart';
 import '../widgets/cards/notes_count_card.dart';
@@ -111,6 +112,8 @@ class _DashboardGrid extends StatelessWidget {
         return const WaterIntakeCard();
       case DashboardCardType.focusTimer:
         return const FocusTimerCard();
+      case DashboardCardType.deviceInfo:
+        return const DeviceInfoCard();
     }
   }
 }
