@@ -23,6 +23,7 @@ class AppDatabase {
     return openDatabase(
       path,
       version: _dbVersion,
+      onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: _onCreate,
     );
   }
