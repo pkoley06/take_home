@@ -1,3 +1,5 @@
+import '../../../../core/constants/db_constants.dart';
+import '../../../../core/sync/sync_queue.dart';
 import '../../../../core/utils/id_generator.dart';
 import '../../domain/entities/checklist_item.dart';
 import '../../domain/entities/note.dart';
@@ -8,9 +10,10 @@ import '../models/note_image_model.dart';
 import '../models/note_model.dart';
 
 class NotesRepositoryImpl implements NotesRepository {
-  NotesRepositoryImpl(this._datasource);
+  NotesRepositoryImpl(this._datasource, this._syncQueue);
 
   final NotesLocalDatasource _datasource;
+  final SyncQueue _syncQueue;
 
   @override
   Future<List<Note>> getActiveNotes() => _datasource.getNotes(archived: false);
@@ -39,6 +42,11 @@ class NotesRepositoryImpl implements NotesRepository {
       updatedAt: now,
     );
     await _datasource.saveNote(note);
+    await _syncQueue.enqueue(
+      tableName: DbTables.notes,
+      operation: 'create',
+      payload: {'id': note.id},
+    );
     return note;
   }
 
@@ -46,15 +54,33 @@ class NotesRepositoryImpl implements NotesRepository {
   Future<Note> updateNote(Note note) async {
     final updated = NoteModel.fromEntity(note.copyWith(updatedAt: DateTime.now()));
     await _datasource.saveNote(updated);
+    await _syncQueue.enqueue(
+      tableName: DbTables.notes,
+      operation: 'update',
+      payload: {'id': updated.id},
+    );
     return updated;
   }
 
   @override
-  Future<void> deleteNote(String id) => _datasource.deleteNote(id);
+  Future<void> deleteNote(String id) async {
+    await _datasource.deleteNote(id);
+    await _syncQueue.enqueue(
+      tableName: DbTables.notes,
+      operation: 'delete',
+      payload: {'id': id},
+    );
+  }
 
   @override
-  Future<void> setArchived(String id, bool isArchived) =>
-      _datasource.setArchived(id, isArchived);
+  Future<void> setArchived(String id, bool isArchived) async {
+    await _datasource.setArchived(id, isArchived);
+    await _syncQueue.enqueue(
+      tableName: DbTables.notes,
+      operation: isArchived ? 'archive' : 'unarchive',
+      payload: {'id': id},
+    );
+  }
 
   @override
   Future<NotesStats> getStats() async {
