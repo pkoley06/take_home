@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../domain/entities/note.dart';
 
@@ -37,6 +38,23 @@ class NoteCard extends StatelessWidget {
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (note.reminderDate != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.alarm_outlined,
+                      size: 16,
+                      color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      DateFormat.yMMMd().format(note.reminderDate!),
+                      style: theme.textTheme.labelMedium,
+                    ),
+                  ],
                 ),
               ],
               if (note.checklist.isNotEmpty || note.images.isNotEmpty) ...[

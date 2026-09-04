@@ -10,6 +10,7 @@ class NoteModel extends Note {
     super.checklist,
     super.images,
     super.isArchived,
+    super.reminderDate,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -22,6 +23,7 @@ class NoteModel extends Note {
       checklist: note.checklist,
       images: note.images,
       isArchived: note.isArchived,
+      reminderDate: note.reminderDate,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
     );
@@ -32,6 +34,7 @@ class NoteModel extends Note {
     List<ChecklistItem> checklist = const [],
     List<NoteImage> images = const [],
   }) {
+    final reminderDate = row['reminder_date'] as String?;
     return NoteModel(
       id: row['id']! as String,
       title: row['title']! as String,
@@ -39,6 +42,7 @@ class NoteModel extends Note {
       checklist: checklist,
       images: images,
       isArchived: (row['is_archived']! as int) == 1,
+      reminderDate: reminderDate == null ? null : DateTime.parse(reminderDate),
       createdAt: DateTime.parse(row['created_at']! as String),
       updatedAt: DateTime.parse(row['updated_at']! as String),
     );
@@ -50,6 +54,7 @@ class NoteModel extends Note {
       'title': title,
       'description': description,
       'is_archived': isArchived ? 1 : 0,
+      'reminder_date': reminderDate?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

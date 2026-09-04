@@ -35,6 +35,7 @@ class AppDatabase {
         title TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
         is_archived INTEGER NOT NULL DEFAULT 0,
+        reminder_date TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )

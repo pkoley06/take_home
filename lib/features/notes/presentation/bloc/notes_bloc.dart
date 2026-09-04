@@ -29,6 +29,7 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
         description: event.description,
         checklist: event.checklist,
         imagePaths: event.imagePaths,
+        reminderDate: event.reminderDate,
       ),
       failureMessage: 'Could not save your note.',
     );

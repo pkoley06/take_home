@@ -11,6 +11,7 @@ class Note extends Equatable {
     this.checklist = const [],
     this.images = const [],
     this.isArchived = false,
+    this.reminderDate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -21,6 +22,7 @@ class Note extends Equatable {
   final List<ChecklistItem> checklist;
   final List<NoteImage> images;
   final bool isArchived;
+  final DateTime? reminderDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -31,6 +33,8 @@ class Note extends Equatable {
     List<NoteImage>? images,
     bool? isArchived,
     DateTime? updatedAt,
+    DateTime? reminderDate,
+    bool clearReminderDate = false,
   }) {
     return Note(
       id: id,
@@ -39,6 +43,7 @@ class Note extends Equatable {
       checklist: checklist ?? this.checklist,
       images: images ?? this.images,
       isArchived: isArchived ?? this.isArchived,
+      reminderDate: clearReminderDate ? null : (reminderDate ?? this.reminderDate),
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -52,6 +57,7 @@ class Note extends Equatable {
         checklist,
         images,
         isArchived,
+        reminderDate,
         createdAt,
         updatedAt,
       ];

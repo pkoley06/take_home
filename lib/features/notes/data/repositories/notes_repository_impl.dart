@@ -27,6 +27,7 @@ class NotesRepositoryImpl implements NotesRepository {
     required String description,
     List<ChecklistItem> checklist = const [],
     List<String> imagePaths = const [],
+    DateTime? reminderDate,
   }) async {
     final now = DateTime.now();
     final note = NoteModel(
@@ -38,6 +39,7 @@ class NotesRepositoryImpl implements NotesRepository {
         for (final path in imagePaths)
           NoteImageModel(id: generateId(), filePath: path, createdAt: now),
       ],
+      reminderDate: reminderDate,
       createdAt: now,
       updatedAt: now,
     );

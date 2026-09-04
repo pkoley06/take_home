@@ -12,6 +12,7 @@ abstract class NotesRepository {
     required String description,
     List<ChecklistItem> checklist = const [],
     List<String> imagePaths = const [],
+    DateTime? reminderDate,
   });
 
   Future<Note> updateNote(Note note);

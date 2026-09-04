@@ -20,15 +20,18 @@ class NoteCreated extends NotesEvent {
     required this.description,
     this.checklist = const [],
     this.imagePaths = const [],
+    this.reminderDate,
   });
 
   final String title;
   final String description;
   final List<ChecklistItem> checklist;
   final List<String> imagePaths;
+  final DateTime? reminderDate;
 
   @override
-  List<Object?> get props => [title, description, checklist, imagePaths];
+  List<Object?> get props =>
+      [title, description, checklist, imagePaths, reminderDate];
 }
 
 class NoteUpdated extends NotesEvent {

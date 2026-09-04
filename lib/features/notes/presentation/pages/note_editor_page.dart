@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection.dart';
+import '../../../../core/platform/native_channels.dart';
 import '../../../../core/utils/id_generator.dart';
 import '../../domain/entities/checklist_item.dart';
 import '../../domain/entities/note.dart';
@@ -42,6 +44,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
 
   late List<ChecklistItem> _checklist;
   late List<NoteImage> _images;
+  DateTime? _reminderDate;
 
   bool get _isEditing => widget.note != null;
 
@@ -54,6 +57,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     );
     _checklist = List.of(widget.note?.checklist ?? const []);
     _images = List.of(widget.note?.images ?? const []);
+    _reminderDate = widget.note?.reminderDate;
   }
 
   @override
@@ -98,24 +102,52 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
     });
   }
 
-  void _addStubImage() {
+  Future<void> _pickReminderDate() async {
+    try {
+      final picked = await getIt<NativeChannels>().pickDate(
+        initialDate: _reminderDate,
+      );
+      if (picked != null && mounted) {
+        setState(() => _reminderDate = picked);
+      }
+    } on NativeChannelUnavailableException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  void _clearReminderDate() {
+    setState(() => _reminderDate = null);
+  }
+
+  Future<void> _addImage() async {
+    NativeSheetOption? option;
+    try {
+      option = await getIt<NativeChannels>().showNativeOptionsSheet();
+    } on NativeChannelUnavailableException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      return;
+    }
+    if (option == null || !mounted) return; // user dismissed the sheet
+
+    // No real camera/gallery/file picker wired up yet, so the chosen source
+    // only tags the placeholder attachment for now.
+    final sourceLabel = switch (option) {
+      NativeSheetOption.camera => 'camera',
+      NativeSheetOption.gallery => 'gallery',
+      NativeSheetOption.filePicker => 'file',
+    };
     setState(() {
       _images = [
         ..._images,
         NoteImage(
           id: generateId(),
-          filePath: 'stub://picked-${generateId()}.jpg',
+          filePath: 'stub://$sourceLabel-${generateId()}.jpg',
           createdAt: DateTime.now(),
         ),
       ];
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Image picker wiring lands in a later module — this is a placeholder attachment.',
-        ),
-      ),
-    );
   }
 
   void _removeImage(NoteImage image) {
@@ -148,6 +180,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
           description: description,
           checklist: resequencedChecklist,
           imagePaths: [for (final image in _images) image.filePath],
+          reminderDate: _reminderDate,
         ),
       );
     } else {
@@ -158,6 +191,8 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
             description: description,
             checklist: resequencedChecklist,
             images: _images,
+            reminderDate: _reminderDate,
+            clearReminderDate: _reminderDate == null,
           ),
         ),
       );
@@ -257,7 +292,28 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
               ),
               textCapitalization: TextCapitalization.sentences,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.alarm_outlined),
+              title: Text(
+                _reminderDate == null
+                    ? 'Remind me'
+                    : DateFormat.yMMMd().format(_reminderDate!),
+              ),
+              subtitle: _reminderDate == null
+                  ? const Text('Uses the native date picker')
+                  : null,
+              trailing: _reminderDate == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear reminder',
+                      icon: const Icon(Icons.close),
+                      onPressed: _clearReminderDate,
+                    ),
+              onTap: _pickReminderDate,
+            ),
+            const SizedBox(height: 8),
             Text('Checklist', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
             for (final item in _checklist)
@@ -312,7 +368,7 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
                       ),
                     ),
                   InkWell(
-                    onTap: _addStubImage,
+                    onTap: _addImage,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: 88,
