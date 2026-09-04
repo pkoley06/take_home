@@ -43,7 +43,9 @@ class Note extends Equatable {
       checklist: checklist ?? this.checklist,
       images: images ?? this.images,
       isArchived: isArchived ?? this.isArchived,
-      reminderDate: clearReminderDate ? null : (reminderDate ?? this.reminderDate),
+      reminderDate: clearReminderDate
+          ? null
+          : (reminderDate ?? this.reminderDate),
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -51,14 +53,14 @@ class Note extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        title,
-        description,
-        checklist,
-        images,
-        isArchived,
-        reminderDate,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    title,
+    description,
+    checklist,
+    images,
+    isArchived,
+    reminderDate,
+    createdAt,
+    updatedAt,
+  ];
 }

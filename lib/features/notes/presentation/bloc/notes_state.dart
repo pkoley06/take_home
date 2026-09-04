@@ -45,11 +45,11 @@ class NotesState extends Equatable {
 
   @override
   List<Object?> get props => [
-        status,
-        activeNotes,
-        archivedNotes,
-        errorMessage,
-        submission,
-        submissionError,
-      ];
+    status,
+    activeNotes,
+    archivedNotes,
+    errorMessage,
+    submission,
+    submissionError,
+  ];
 }

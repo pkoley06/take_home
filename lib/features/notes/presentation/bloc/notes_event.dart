@@ -30,8 +30,13 @@ class NoteCreated extends NotesEvent {
   final DateTime? reminderDate;
 
   @override
-  List<Object?> get props =>
-      [title, description, checklist, imagePaths, reminderDate];
+  List<Object?> get props => [
+    title,
+    description,
+    checklist,
+    imagePaths,
+    reminderDate,
+  ];
 }
 
 class NoteUpdated extends NotesEvent {

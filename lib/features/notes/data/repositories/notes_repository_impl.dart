@@ -69,7 +69,9 @@ class NotesRepositoryImpl implements NotesRepository {
 
   @override
   Future<Note> updateNote(Note note) async {
-    final updated = NoteModel.fromEntity(note.copyWith(updatedAt: DateTime.now()));
+    final updated = NoteModel.fromEntity(
+      note.copyWith(updatedAt: DateTime.now()),
+    );
     await _datasource.saveNote(updated);
     await _syncQueue.enqueue(
       tableName: DbTables.notes,

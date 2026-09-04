@@ -77,9 +77,7 @@ class _DragCell extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isTarget
-                  ? theme.colorScheme.primary
-                  : Colors.transparent,
+              color: isTarget ? theme.colorScheme.primary : Colors.transparent,
               width: 2,
             ),
           ),

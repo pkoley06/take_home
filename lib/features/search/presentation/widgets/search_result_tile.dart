@@ -51,10 +51,7 @@ class SearchResultTile extends StatelessWidget {
       spans.add(
         TextSpan(
           text: text.substring(index, index + query.length),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: highlightColor,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: highlightColor),
         ),
       );
       start = index + query.length;

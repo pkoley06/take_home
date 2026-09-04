@@ -49,7 +49,9 @@ class NotesLocalDatasource {
     final grouped = <String, List<ChecklistItemModel>>{};
     for (final row in rows) {
       final noteId = row['note_id']! as String;
-      grouped.putIfAbsent(noteId, () => []).add(ChecklistItemModel.fromMap(row));
+      grouped
+          .putIfAbsent(noteId, () => [])
+          .add(ChecklistItemModel.fromMap(row));
     }
     return grouped;
   }

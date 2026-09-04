@@ -12,7 +12,10 @@ class DashboardStarted extends DashboardEvent {
 }
 
 class DashboardCardsReordered extends DashboardEvent {
-  const DashboardCardsReordered({required this.oldIndex, required this.newIndex});
+  const DashboardCardsReordered({
+    required this.oldIndex,
+    required this.newIndex,
+  });
 
   final int oldIndex;
   final int newIndex;

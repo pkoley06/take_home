@@ -42,7 +42,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
     await _syncQueue.enqueue(
       tableName: DbTables.dashboardCards,
       operation: 'reorder',
-      payload: {'order': [for (final card in cards) card.type.name]},
+      payload: {
+        'order': [for (final card in cards) card.type.name],
+      },
     );
   }
 }
