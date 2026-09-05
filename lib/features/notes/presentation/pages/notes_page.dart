@@ -180,43 +180,54 @@ class _NotesGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        const spacing = 16.0;
         final columns = _columnsForWidth(constraints.maxWidth);
-        return GridView.builder(
+        final totalSpacing = spacing * (columns - 1);
+        final itemWidth = (constraints.maxWidth - 32 - totalSpacing) / columns;
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.1,
+          child: Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              for (final note in notes)
+                SizedBox(
+                  width: itemWidth,
+                  // Dismissible lays its background/content out in a Stack,
+                  // which only loosens (not removes) the width constraint it
+                  // passes to them — without forcing the content's own width
+                  // too, NoteCard shrink-wraps to its text instead of filling
+                  // the slot, leaving a huge dead-space swipe/tap target.
+                  child: Dismissible(
+                    key: ValueKey(note.id),
+                    background: _swipeBackground(
+                      context,
+                      alignment: Alignment.centerLeft,
+                      icon: archiveIcon,
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                    secondaryBackground: _swipeBackground(
+                      context,
+                      alignment: Alignment.centerRight,
+                      icon: Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.errorContainer,
+                    ),
+                    confirmDismiss: (direction) async {
+                      if (direction == DismissDirection.endToStart) {
+                        return _confirmDelete(context, note);
+                      }
+                      onArchive(note);
+                      return false;
+                    },
+                    onDismissed: (direction) => onDelete(note),
+                    child: SizedBox(
+                      width: itemWidth,
+                      child: NoteCard(note: note, onTap: () => onTap(note)),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          itemCount: notes.length,
-          itemBuilder: (context, index) {
-            final note = notes[index];
-            return Dismissible(
-              key: ValueKey(note.id),
-              background: _swipeBackground(
-                context,
-                alignment: Alignment.centerLeft,
-                icon: archiveIcon,
-                color: Theme.of(context).colorScheme.primaryContainer,
-              ),
-              secondaryBackground: _swipeBackground(
-                context,
-                alignment: Alignment.centerRight,
-                icon: Icons.delete_outline,
-                color: Theme.of(context).colorScheme.errorContainer,
-              ),
-              confirmDismiss: (direction) async {
-                if (direction == DismissDirection.endToStart) {
-                  return _confirmDelete(context, note);
-                }
-                onArchive(note);
-                return false;
-              },
-              onDismissed: (direction) => onDelete(note),
-              child: NoteCard(note: note, onTap: () => onTap(note)),
-            );
-          },
         );
       },
     );

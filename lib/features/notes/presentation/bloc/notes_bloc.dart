@@ -18,7 +18,16 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
   final NotesRepository _repository;
 
   Future<void> _onStarted(NotesStarted event, Emitter<NotesState> emit) async {
-    emit(state.copyWith(status: NotesStatus.loading));
+    // Re-dispatched after every editor save to pull this (list-scoped) bloc's
+    // state back in sync with the editor's own separate bloc instance —
+    // only the genuine first load should blank the screen with a skeleton.
+    final alreadyLoaded = state.status == NotesStatus.loaded;
+    if (!alreadyLoaded) {
+      emit(state.copyWith(status: NotesStatus.loading));
+      // Local sqlite reads finish in a few ms — without a floor, the
+      // skeleton's shimmer never gets a chance to actually read as loading.
+      await Future.delayed(const Duration(milliseconds: 500));
+    }
     await _reload(emit);
   }
 

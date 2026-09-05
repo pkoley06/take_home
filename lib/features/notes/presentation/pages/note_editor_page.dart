@@ -318,6 +318,26 @@ class _NoteEditorViewState extends State<_NoteEditorView> {
 
     return Hero(
       tag: noteHeroTag(existing.id),
+      // A TextField's EditableText can't safely fly mid-transition (its
+      // focus/text-input connection doesn't survive being briefly detached
+      // into the Overlay), so the shuttle renders a static title preview
+      // instead of the real field — the field is back and interactive the
+      // instant the flight lands.
+      flightShuttleBuilder: (_, _, _, _, _) => Material(
+        type: MaterialType.card,
+        color: theme.cardColor,
+        elevation: 1,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            existing.title.isEmpty ? 'Untitled' : existing.title,
+            style: theme.textTheme.titleLarge,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
       child: Material(
         type: MaterialType.card,
         color: theme.cardColor,

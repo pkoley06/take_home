@@ -25,6 +25,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     final alreadyLoaded = state.status == DashboardStatus.loaded;
     if (!alreadyLoaded) {
       emit(state.copyWith(status: DashboardStatus.loading));
+      // Local sqlite reads finish in a few ms — without a floor, the
+      // skeleton's shimmer never gets a chance to actually read as loading.
+      await Future.delayed(const Duration(milliseconds: 500));
     }
     try {
       final cards = alreadyLoaded
